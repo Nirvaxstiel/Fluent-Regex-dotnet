@@ -7,7 +7,21 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <EnablePreviewFeatures>true</EnablePreviewFeatures>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
   </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="src\**\*.cs" />
+    <Compile Include="test\**\*.cs">
+      <ExcludeFromCodeCoverage>true</ExcludeFromCodeCoverage>
+    </Compile>
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="test\**\*.cs">
+      <Visible>false</Visible>
+    </None>
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="CsCheck" Version="3.0.0" />

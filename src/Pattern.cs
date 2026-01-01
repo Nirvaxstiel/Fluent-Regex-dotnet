@@ -1,17 +1,60 @@
 namespace FluentRegex;
 
+/// <summary>
+/// Represents an immutable pattern that can be combined with other patterns to build regular expressions.
+/// This is the base class for all pattern types in the FluentRegex library.
+/// </summary>
 public abstract record Pattern
 {
+    /// <summary>
+    /// Implicitly converts a string to a Text pattern.
+    /// </summary>
+    /// <param name="text">The literal text to match.</param>
+    /// <returns>A Text pattern that matches the specified literal text.</returns>
     public static implicit operator Pattern(string text) => new Text(text);
 
+    /// <summary>
+    /// Creates a pattern that matches a single digit character (\d).
+    /// </summary>
+    /// <returns>A pattern that matches any digit character (0-9).</returns>
     public static Pattern Digit() => new Digit();
+
+    /// <summary>
+    /// Creates a pattern that matches the specified literal text.
+    /// </summary>
+    /// <param name="value">The literal text to match. Cannot be null or empty.</param>
+    /// <returns>A pattern that matches the specified literal text.</returns>
+    /// <exception cref="ArgumentException">Thrown when value is null or empty.</exception>
     public static Pattern Text(string value) =>
-        string.IsNullOrEmpty(value) ? throw new ArgumentException("Text value cannot be null or empty", nameof(value)) : new Text(value);
+        string.IsNullOrEmpty(value)
+            ? throw new ArgumentException("Text value cannot be null or empty", nameof(value))
+            : new Text(value);
+
+    /// <summary>
+    /// Creates a pattern that matches any character from the specified character set.
+    /// </summary>
+    /// <param name="chars">The characters to include in the character set. Cannot be null or empty.</param>
+    /// <returns>A pattern that matches any character from the specified set.</returns>
+    /// <exception cref="ArgumentException">Thrown when chars is null or empty.</exception>
     public static Pattern OneOf(string chars) =>
-        string.IsNullOrEmpty(chars) ? throw new ArgumentException("Character set cannot be null or empty", nameof(chars)) : new CharSet(chars);
+        string.IsNullOrEmpty(chars)
+            ? throw new ArgumentException("Character set cannot be null or empty", nameof(chars))
+            : new CharSet(chars);
+
+    /// <summary>
+    /// Creates an anchored pattern that matches the entire input string from start to end.
+    /// </summary>
+    /// <param name="inner">The inner pattern to anchor. Cannot be null.</param>
+    /// <returns>A pattern that matches the inner pattern anchored to the entire input.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when inner is null.</exception>
     public static Pattern Match(Pattern inner) =>
         inner is null ? throw new ArgumentNullException(nameof(inner)) : new MatchRoot(inner);
 
+    /// <summary>
+    /// Returns the regex string representation of this pattern.
+    /// If the pattern is invalid, falls back to the default record ToString implementation.
+    /// </summary>
+    /// <returns>The regex string representation of this pattern.</returns>
     public sealed override string ToString()
     {
         try
@@ -26,8 +69,18 @@ public abstract record Pattern
     }
 }
 
+/// <summary>
+/// Extension methods for building and manipulating patterns in a fluent manner.
+/// </summary>
 public static class PatternExtensions
 {
+    /// <summary>
+    /// Creates a sequence pattern that matches the left pattern followed by the right pattern.
+    /// </summary>
+    /// <param name="left">The first pattern to match. Cannot be null.</param>
+    /// <param name="right">The second pattern to match. Cannot be null.</param>
+    /// <returns>A pattern that matches the left pattern followed by the right pattern.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when left or right is null.</exception>
     public static Pattern Then(this Pattern left, Pattern right) =>
         (left, right) switch
         {
@@ -36,34 +89,88 @@ public static class PatternExtensions
             var (l, r) => new Sequence(l, r)
         };
 
+    /// <summary>
+    /// Creates a repetition pattern that matches the pattern exactly the specified number of times.
+    /// </summary>
+    /// <param name="pattern">The pattern to repeat. Cannot be null.</param>
+    /// <param name="count">The exact number of times to repeat. Must be non-negative.</param>
+    /// <returns>A pattern that matches the input pattern exactly count times.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when pattern is null.</exception>
+    /// <exception cref="ArgumentException">Thrown when count is negative.</exception>
     public static Pattern Exactly(this Pattern pattern, int count) =>
-        pattern is null ? throw new ArgumentNullException(nameof(pattern)) :
-        count < 0 ? throw new ArgumentException("Count must be non-negative", nameof(count)) :
-        new Repeat(pattern, new Exactly(count));
+        pattern is null ? throw new ArgumentNullException(nameof(pattern))
+        : count < 0 ? throw new ArgumentException("Count must be non-negative", nameof(count))
+        : new Repeat(pattern, new Exactly(count));
 
+    /// <summary>
+    /// Creates a repetition pattern that matches the pattern between min and max times (inclusive).
+    /// </summary>
+    /// <param name="pattern">The pattern to repeat. Cannot be null.</param>
+    /// <param name="min">The minimum number of repetitions. Must be non-negative.</param>
+    /// <param name="max">The maximum number of repetitions. Must be greater than or equal to min.</param>
+    /// <returns>A pattern that matches the input pattern between min and max times.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when pattern is null.</exception>
+    /// <exception cref="ArgumentException">Thrown when min is negative or max is less than min.</exception>
     public static Pattern Between(this Pattern pattern, int min, int max) =>
-        pattern is null ? throw new ArgumentNullException(nameof(pattern)) :
-        min < 0 ? throw new ArgumentException("Min must be non-negative", nameof(min)) :
-        max < min ? throw new ArgumentException("Max must be greater than or equal to min", nameof(max)) :
-        new Repeat(pattern, new Between(min, max));
+        pattern is null ? throw new ArgumentNullException(nameof(pattern))
+        : min < 0 ? throw new ArgumentException("Min must be non-negative", nameof(min))
+        : max < min
+            ? throw new ArgumentException("Max must be greater than or equal to min", nameof(max))
+        : new Repeat(pattern, new Between(min, max));
 
+    /// <summary>
+    /// Creates a repetition pattern that matches the pattern zero or one time (equivalent to ?).
+    /// </summary>
+    /// <param name="pattern">The pattern to make optional. Cannot be null.</param>
+    /// <returns>A pattern that matches the input pattern zero or one time.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when pattern is null.</exception>
     public static Pattern Optional(this Pattern pattern) =>
-        pattern is null ? throw new ArgumentNullException(nameof(pattern)) :
-        new Repeat(pattern, new Optional());
+        pattern is null
+            ? throw new ArgumentNullException(nameof(pattern))
+        : new Repeat(pattern, new Optional());
 
+    /// <summary>
+    /// Creates a repetition pattern that matches the pattern one or more times (equivalent to +).
+    /// </summary>
+    /// <param name="pattern">The pattern to repeat. Cannot be null.</param>
+    /// <returns>A pattern that matches the input pattern one or more times.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when pattern is null.</exception>
     public static Pattern OneOrMore(this Pattern pattern) =>
-        pattern is null ? throw new ArgumentNullException(nameof(pattern)) :
-        new Repeat(pattern, new OneOrMore());
+        pattern is null
+            ? throw new ArgumentNullException(nameof(pattern))
+        : new Repeat(pattern, new OneOrMore());
 
+    /// <summary>
+    /// Creates a repetition pattern that matches the pattern zero or more times (equivalent to *).
+    /// </summary>
+    /// <param name="pattern">The pattern to repeat. Cannot be null.</param>
+    /// <returns>A pattern that matches the input pattern zero or more times.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when pattern is null.</exception>
     public static Pattern Many(this Pattern pattern) =>
-        pattern is null ? throw new ArgumentNullException(nameof(pattern)) :
-        new Repeat(pattern, new Many());
+        pattern is null
+            ? throw new ArgumentNullException(nameof(pattern))
+        : new Repeat(pattern, new Many());
 
+    /// <summary>
+    /// Creates a named capture group around the pattern.
+    /// </summary>
+    /// <param name="pattern">The pattern to capture. Cannot be null.</param>
+    /// <param name="name">The name of the capture group. Cannot be null or empty.</param>
+    /// <returns>A pattern that captures the input pattern with the specified name.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when pattern is null.</exception>
+    /// <exception cref="ArgumentException">Thrown when name is null or empty.</exception>
     public static Pattern Capture(this Pattern pattern, string name) =>
-        pattern is null ? throw new ArgumentNullException(nameof(pattern)) :
-        string.IsNullOrEmpty(name) ? throw new ArgumentException("Capture name cannot be null or empty", nameof(name)) :
-        new Capture(name, pattern);
+        pattern is null ? throw new ArgumentNullException(nameof(pattern))
+        : string.IsNullOrEmpty(name)
+            ? throw new ArgumentException("Capture name cannot be null or empty", nameof(name))
+        : new Capture(name, pattern);
 
+    /// <summary>
+    /// Builds the pattern into a regex string, applying validation and optimization.
+    /// </summary>
+    /// <param name="pattern">The pattern to build.</param>
+    /// <returns>The regex string representation of the pattern.</returns>
+    /// <exception cref="InvalidOperationException">Thrown when the pattern is invalid or cannot be built.</exception>
     public static string Build(this Pattern pattern)
     {
         var result = PatternValidation.ValidatePattern(pattern)
@@ -75,10 +182,29 @@ public static class PatternExtensions
             : throw new InvalidOperationException($"Pattern build failed: {result.ErrorMessage}");
     }
 
+    /// <summary>
+    /// Compiles the pattern into a .NET Regex object with default options (Compiled | NonBacktracking).
+    /// </summary>
+    /// <param name="pattern">The pattern to compile.</param>
+    /// <returns>A compiled Regex object with default performance options.</returns>
+    /// <exception cref="InvalidOperationException">Thrown when the pattern cannot be compiled.</exception>
     public static System.Text.RegularExpressions.Regex Compile(this Pattern pattern) =>
-        pattern.Compile(System.Text.RegularExpressions.RegexOptions.Compiled | System.Text.RegularExpressions.RegexOptions.NonBacktracking);
+        pattern.Compile(
+            System.Text.RegularExpressions.RegexOptions.Compiled
+            | System.Text.RegularExpressions.RegexOptions.NonBacktracking
+        );
 
-    public static System.Text.RegularExpressions.Regex Compile(this Pattern pattern, System.Text.RegularExpressions.RegexOptions options)
+    /// <summary>
+    /// Compiles the pattern into a .NET Regex object with the specified options.
+    /// </summary>
+    /// <param name="pattern">The pattern to compile.</param>
+    /// <param name="options">The regex options to apply.</param>
+    /// <returns>A compiled Regex object with the specified options.</returns>
+    /// <exception cref="InvalidOperationException">Thrown when the pattern cannot be compiled.</exception>
+    public static System.Text.RegularExpressions.Regex Compile(
+        this Pattern pattern,
+        System.Text.RegularExpressions.RegexOptions options
+    )
     {
         var regexString = pattern.Build();
         try
