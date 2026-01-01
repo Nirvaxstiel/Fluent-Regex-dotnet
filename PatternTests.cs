@@ -589,4 +589,58 @@ public class PatternTests
                 return true;
             }
         );
+
+    [Fact]
+    public void NamedCaptureSupport() =>
+        Check.Sample(
+            from name in Gen.String[1, 20].Where(s => !string.IsNullOrEmpty(s) &&
+                                                      s.All(char.IsLetterOrDigit) &&
+                                                      char.IsLetter(s[0])) // Group names must start with a letter
+            from text in Gen.String[1, 20].Where(s => !string.IsNullOrEmpty(s))
+            from count in Gen.Int[1, 10]
+            select (name, text, count),
+            data =>
+            {
+                var (name, text, count) = data;
+
+                // Test basic capture creation
+                var innerPattern = Pattern.Digit().Exactly(count);
+                var capturePattern = innerPattern.Capture(name);
+
+                Assert.IsType<Capture>(capturePattern);
+                var capture = (Capture)capturePattern;
+                Assert.Equal(name, capture.Name);
+                Assert.Equal(innerPattern, capture.Inner);
+
+                // Test capture with complex inner pattern
+                var complexInner = Pattern.Text(text).Then(Pattern.Digit()).OneOrMore();
+                var complexCapture = complexInner.Capture(name);
+
+                Assert.IsType<Capture>(complexCapture);
+                var complexCaptureTyped = (Capture)complexCapture;
+                Assert.Equal(name, complexCaptureTyped.Name);
+                Assert.Equal(complexInner, complexCaptureTyped.Inner);
+
+                // Test regex generation
+                var regexString = RegexBuilder.BuildRegexString(capturePattern);
+                var expectedRegex = count switch
+                {
+                    0 => $"(?<{name}>\\d)",
+                    1 => $"(?<{name}>\\d)",
+                    _ => $"(?<{name}>\\d{{{count}}})"
+                };
+                Assert.Equal(expectedRegex, regexString);
+
+                // Test compilation and matching
+                var compiledRegex = capturePattern.Compile();
+                var testString = new string('5', count);
+                var match = compiledRegex.Match(testString);
+                Assert.True(match.Success);
+                Assert.True(match.Groups.ContainsKey(name));
+                Assert.Equal(testString, match.Groups[name].Value);
+
+                return true;
+            }
+        );
+
 }

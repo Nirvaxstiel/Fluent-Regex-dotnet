@@ -59,6 +59,11 @@ public static class PatternExtensions
         pattern is null ? throw new ArgumentNullException(nameof(pattern)) :
         new Repeat(pattern, new Many());
 
+    public static Pattern Capture(this Pattern pattern, string name) =>
+        pattern is null ? throw new ArgumentNullException(nameof(pattern)) :
+        string.IsNullOrEmpty(name) ? throw new ArgumentException("Capture name cannot be null or empty", nameof(name)) :
+        new Capture(name, pattern);
+
     public static string Build(this Pattern pattern)
     {
         var result = PatternValidation.ValidatePattern(pattern)
