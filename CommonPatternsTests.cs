@@ -1,21 +1,17 @@
 namespace FluentRegex.Tests;
 
 using CsCheck;
-using Xunit;
 using FluentRegex.Common;
+using Xunit;
 
 public class CommonPatternsTests
 {
-    // === COMMON PATTERN TESTS ===
-    // These test pre-built patterns from FluentRegex.Common namespace
-
     [Fact]
     public void CommonPatternOptimization() =>
         Check.Sample(
             Gen.String[1, 20].Where(s => !string.IsNullOrEmpty(s)),
             separator =>
             {
-                // Test that common patterns get optimized like custom patterns
                 var emailPattern = Common.Email();
                 var optimizedEmail = PatternOptimization.OptimizePattern(emailPattern);
                 Assert.NotNull(optimizedEmail);
@@ -36,7 +32,6 @@ public class CommonPatternsTests
                 var optimizedDate = PatternOptimization.OptimizePattern(datePattern);
                 Assert.NotNull(optimizedDate);
 
-                // Test custom separator date pattern
                 var customDatePattern = Common.Date(separator);
                 var optimizedCustomDate = PatternOptimization.OptimizePattern(customDatePattern);
                 Assert.NotNull(optimizedCustomDate);
@@ -51,7 +46,6 @@ public class CommonPatternsTests
         var emailPattern = Common.Email();
         var optimized = PatternOptimization.OptimizePattern(emailPattern);
 
-        // Test that the pattern is properly constructed
         Assert.NotNull(optimized);
         Assert.IsType<Sequence>(optimized);
     }
@@ -62,7 +56,6 @@ public class CommonPatternsTests
         var phonePattern = Common.Phone();
         var optimized = PatternOptimization.OptimizePattern(phonePattern);
 
-        // Test that the pattern is properly constructed
         Assert.NotNull(optimized);
         Assert.IsType<Sequence>(optimized);
     }
@@ -73,7 +66,6 @@ public class CommonPatternsTests
         var urlPattern = Common.Url();
         var optimized = PatternOptimization.OptimizePattern(urlPattern);
 
-        // Test that the pattern is properly constructed
         Assert.NotNull(optimized);
         Assert.IsType<Sequence>(optimized);
     }
@@ -84,7 +76,6 @@ public class CommonPatternsTests
         var ipv4Pattern = Common.IPv4();
         var optimized = PatternOptimization.OptimizePattern(ipv4Pattern);
 
-        // Test that the pattern is properly constructed
         Assert.NotNull(optimized);
         Assert.IsType<Sequence>(optimized);
     }
@@ -95,11 +86,9 @@ public class CommonPatternsTests
         var datePattern = Common.Date();
         var optimized = PatternOptimization.OptimizePattern(datePattern);
 
-        // Test that the pattern is properly constructed
         Assert.NotNull(optimized);
         Assert.IsType<Sequence>(optimized);
 
-        // Test custom separator
         var customDatePattern = Common.Date("-");
         var optimizedCustom = PatternOptimization.OptimizePattern(customDatePattern);
         Assert.NotNull(optimizedCustom);

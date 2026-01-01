@@ -186,7 +186,6 @@ public static class PatternOptimization
 
     private static Pattern BuildRightAssociativeSequence(List<Pattern> patterns)
     {
-        // Build right-associative: [A, B, C] -> Sequence(A, Sequence(B, C))
         return patterns.Count switch
         {
             0 => throw new ArgumentException("Cannot build sequence from empty list"),
@@ -225,4 +224,139 @@ public static class PatternValidation
             MatchRoot(var inner) => ValidatePattern(inner).Map(_ => pattern),
             _ => Result<Pattern>.Success(pattern)
         };
+}
+
+public static class RegexBuilder
+{
+    public static string BuildRegexString(Pattern pattern)
+    {
+        var builder = new System.Text.StringBuilder();
+        BuildRegexStringInternal(pattern, builder);
+        return builder.ToString();
+    }
+
+    private static void BuildRegexStringInternal(Pattern pattern, System.Text.StringBuilder builder)
+    {
+        switch (pattern)
+        {
+            case Text text:
+                builder.Append(EscapeRegexSpecialCharacters(text.Value));
+                break;
+            case Digit:
+                builder.Append(@"\d");
+                break;
+            case CharSet charSet:
+                builder.Append($"[{EscapeCharacterSetSpecialChars(charSet.Chars)}]");
+                break;
+            case Sequence(var left, var right):
+                BuildSequence(left, right, builder);
+                break;
+            case Repeat(var inner, var count):
+                BuildRepeat(inner, count, builder);
+                break;
+            case Capture(var name, var inner):
+                BuildCapture(name, inner, builder);
+                break;
+            case MatchRoot(var inner):
+                BuildMatchRoot(inner, builder);
+                break;
+            default:
+                throw new ArgumentException($"Unknown pattern type: {pattern.GetType()}");
+        }
+    }
+
+    private static void BuildSequence(Pattern left, Pattern right, System.Text.StringBuilder builder)
+    {
+        BuildRegexStringInternal(left, builder);
+        BuildRegexStringInternal(right, builder);
+    }
+
+    private static void BuildRepeat(Pattern inner, Count count, System.Text.StringBuilder builder)
+    {
+        var needsGrouping = inner switch
+        {
+            Text => false,
+            Digit => false,
+            CharSet => false,
+            Capture => false,
+            _ => true
+        };
+
+        if (needsGrouping)
+            builder.Append("(?:");
+
+        BuildRegexStringInternal(inner, builder);
+
+        if (needsGrouping)
+            builder.Append(')');
+
+        builder.Append(BuildQuantifier(count));
+    }
+
+    private static void BuildCapture(string name, Pattern inner, System.Text.StringBuilder builder)
+    {
+        builder.Append($"(?<{name}>");
+        BuildRegexStringInternal(inner, builder);
+        builder.Append(')');
+    }
+
+    private static void BuildMatchRoot(Pattern inner, System.Text.StringBuilder builder)
+    {
+        builder.Append('^');
+        BuildRegexStringInternal(inner, builder);
+        builder.Append('$');
+    }
+
+    private static string BuildQuantifier(Count count) =>
+        count switch
+        {
+            Exactly(var value) => value switch
+            {
+                0 => "",
+                1 => "",
+                _ => $"{{{value}}}"
+            },
+            Between(var min, var max) => (min, max) switch
+            {
+                (0, 1) => "?",
+                (1, int.MaxValue) => "+",
+                (0, int.MaxValue) => "*",
+                _ when min == max => $"{{{min}}}",
+                _ => $"{{{min},{max}}}"
+            },
+            Optional => "?",
+            OneOrMore => "+",
+            Many => "*",
+            _ => throw new ArgumentException($"Unknown count type: {count.GetType()}")
+        };
+
+    private static string EscapeRegexSpecialCharacters(string text)
+    {
+        var specialChars = new[] { '.', '^', '$', '*', '+', '?', '(', ')', '[', ']', '{', '}', '|', '\\' };
+        var builder = new System.Text.StringBuilder(text.Length * 2);
+
+        foreach (var c in text)
+        {
+            if (specialChars.Contains(c))
+                builder.Append('\\');
+            builder.Append(c);
+        }
+
+        return builder.ToString();
+    }
+
+    private static string EscapeCharacterSetSpecialChars(string chars)
+    {
+        var specialChars = new[] { ']', '\\', '^', '-' };
+        var builder = new System.Text.StringBuilder(chars.Length * 2);
+
+        foreach (var c in chars)
+        {
+            if (specialChars.Contains(c))
+                builder.Append('\\');
+            builder.Append(c);
+        }
+
+        return builder.ToString();
+    }
 }
