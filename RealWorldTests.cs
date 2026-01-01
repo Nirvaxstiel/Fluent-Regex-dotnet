@@ -38,6 +38,48 @@ public class RealWorldTests
     }
 
     [Fact]
+    public void RealWorldScenario_BuildIntegration()
+    {
+        var emailPattern = Pattern.OneOf("abcdefghijklmnopqrstuvwxyz")
+            .OneOrMore()
+            .Then("@")
+            .Then(Pattern.OneOf("abcdefghijklmnopqrstuvwxyz").OneOrMore())
+            .Then(".")
+            .Then(Pattern.OneOf("abcdefghijklmnopqrstuvwxyz").Between(2, 4));
+
+        // Option 1: Build to string, user creates Regex
+        var regexString = emailPattern.Build();
+        var regex = new System.Text.RegularExpressions.Regex(regexString);
+        Assert.Matches(regex, "test@example.com");
+        Assert.DoesNotMatch(regex, "invalid-email");
+
+        // Option 2: Compile with default options
+        var compiledRegex = emailPattern.Compile();
+        Assert.Equal(System.Text.RegularExpressions.RegexOptions.Compiled | System.Text.RegularExpressions.RegexOptions.NonBacktracking, compiledRegex.Options);
+        Assert.Matches(compiledRegex, "test@example.com");
+
+        // Option 3: Compile with custom options
+        var customRegex = emailPattern.Compile(System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.Multiline);
+        Assert.Equal(System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.Multiline, customRegex.Options);
+        Assert.Matches(customRegex, "TEST@EXAMPLE.COM");
+
+        var phonePattern = Pattern.Digit().Exactly(3)
+            .Then("-")
+            .Then(Pattern.Digit().Exactly(3))
+            .Then("-")
+            .Then(Pattern.Digit().Exactly(4));
+
+        var phoneRegexString = phonePattern.Build();
+        var phoneRegex = new System.Text.RegularExpressions.Regex(phoneRegexString);
+        Assert.Matches(phoneRegex, "123-456-7890");
+        Assert.DoesNotMatch(phoneRegex, "12-345-6789");
+
+        // Test ToString() method
+        Assert.Equal(regexString, emailPattern.ToString());
+        Assert.Equal(phoneRegexString, phonePattern.ToString());
+    }
+
+    [Fact]
     public void RealWorldScenario_NestedGrouping()
     {
         Pattern group1 = Pattern.Text("prefix").Then(Pattern.Digit()).Then("suffix");

@@ -419,4 +419,174 @@ public class PatternTests
         var specialTextRegex = RegexBuilder.BuildRegexString(specialTextPattern);
         Assert.Equal(@"hello\.world\*", specialTextRegex);
     }
+
+    [Fact]
+    public void SimpleBuildTest()
+    {
+        var pattern = Pattern.Text("hello");
+        var result = pattern.Build();
+        Assert.Equal("hello", result);
+
+        var digitPattern = Pattern.Digit();
+        var digitResult = digitPattern.Build();
+        Assert.Equal(@"\d", digitResult);
+
+        var sequencePattern = Pattern.Text("hello").Then(Pattern.Digit());
+        var sequenceResult = sequencePattern.Build();
+        Assert.Equal(@"hello\d", sequenceResult);
+
+        // Test ToString() method
+        var toStringResult = sequencePattern.ToString();
+        Assert.Equal(@"hello\d", toStringResult);
+
+        // Test Compile() method with default options
+        var compiledRegex = sequencePattern.Compile();
+        Assert.Equal(System.Text.RegularExpressions.RegexOptions.Compiled | System.Text.RegularExpressions.RegexOptions.NonBacktracking, compiledRegex.Options);
+        Assert.Matches(compiledRegex, "hello5");
+        Assert.DoesNotMatch(compiledRegex, "hello");
+
+        // Test Compile() method with custom options
+        var customRegex = sequencePattern.Compile(System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        Assert.Equal(System.Text.RegularExpressions.RegexOptions.IgnoreCase, customRegex.Options);
+        Assert.Matches(customRegex, "hello5");
+    }
+
+    [Fact]
+    public void DeterministicBuild() =>
+        Check.Sample(
+            from text in Gen.String[1, 20].Where(s => !string.IsNullOrEmpty(s))
+            from count in Gen.Int[1, 10]
+            select (text, count),
+            data =>
+            {
+                var (text, count) = data;
+
+                var pattern = Pattern.Text(text).Then(Pattern.Digit().Exactly(count));
+
+                var result1 = pattern.Build();
+                var result2 = pattern.Build();
+
+                Assert.Equal(result1, result2);
+
+                var complexPattern = Pattern.Match(
+                    Pattern.OneOf("abc")
+                        .Then(Pattern.Digit().Between(2, 5))
+                        .Then(Pattern.Text(text).Optional())
+                );
+
+                var complexResult1 = complexPattern.Build();
+                var complexResult2 = complexPattern.Build();
+
+                Assert.Equal(complexResult1, complexResult2);
+
+                return true;
+            }
+        );
+
+    [Fact]
+    public void BuildValidation() =>
+        Check.Sample(
+            from text in Gen.String[1, 20].Where(s => !string.IsNullOrEmpty(s))
+            from count in Gen.Int[1, 10]
+            select (text, count),
+            data =>
+            {
+                var (text, count) = data;
+
+                var validPattern = Pattern.Text(text).Then(Pattern.Digit().Exactly(count));
+                var validResult = validPattern.Build();
+                Assert.NotNull(validResult);
+                Assert.NotEmpty(validResult);
+
+                var nestedMatch = new MatchRoot(new MatchRoot(Pattern.Digit()));
+                Assert.Throws<InvalidOperationException>(() => nestedMatch.Build());
+
+                var stackedRepeat = new Repeat(new Repeat(Pattern.Digit(), new Exactly(2)), new Optional());
+                Assert.Throws<InvalidOperationException>(() => stackedRepeat.Build());
+
+                return true;
+            }
+        );
+
+    [Fact]
+    public void BuildOptimization() =>
+        Check.Sample(
+            from text1 in Gen.String[1, 20].Where(s => !string.IsNullOrEmpty(s))
+            from text2 in Gen.String[1, 20].Where(s => !string.IsNullOrEmpty(s))
+            select (text1, text2),
+            data =>
+            {
+                var (text1, text2) = data;
+
+                var adjacentTexts = new Sequence(new Text(text1), new Text(text2));
+                var mergedResult = adjacentTexts.Build();
+
+                // The result should be the escaped version of the concatenated texts
+                var expectedEscaped = RegexBuilder.BuildRegexString(new Text(text1 + text2));
+                Assert.Equal(expectedEscaped, mergedResult);
+
+                var complexPattern = Pattern.Text(text1)
+                    .Then(Pattern.Digit().Exactly(3))
+                    .Then(Pattern.Text(text2));
+                var complexResult = complexPattern.Build();
+
+                // Check that the result contains the escaped versions and the digit pattern
+                Assert.Contains(@"\d{3}", complexResult);
+
+                return true;
+            }
+        );
+
+    [Fact]
+    public void CompileWithDefaultOptions() =>
+        Check.Sample(
+            from text in Gen.String[1, 20].Where(s => !string.IsNullOrEmpty(s))
+            from count in Gen.Int[1, 10]
+            select (text, count),
+            data =>
+            {
+                var (text, count) = data;
+
+                var pattern = Pattern.Text(text).Then(Pattern.Digit().Exactly(count));
+                var compiledRegex = pattern.Compile();
+
+                var expectedOptions = System.Text.RegularExpressions.RegexOptions.Compiled |
+                                    System.Text.RegularExpressions.RegexOptions.NonBacktracking;
+                Assert.Equal(expectedOptions, compiledRegex.Options);
+
+                var testString = text + new string('5', count);
+                Assert.Matches(compiledRegex, testString);
+
+                return true;
+            }
+        );
+
+    [Fact]
+    public void CompileWithCustomOptions() =>
+        Check.Sample(
+            from text in Gen.String[1, 20].Where(s => !string.IsNullOrEmpty(s))
+            from count in Gen.Int[1, 10]
+            select (text, count),
+            data =>
+            {
+                var (text, count) = data;
+
+                var pattern = Pattern.Text(text).Then(Pattern.Digit().Exactly(count));
+
+                var customOptions1 = System.Text.RegularExpressions.RegexOptions.IgnoreCase;
+                var regex1 = pattern.Compile(customOptions1);
+                Assert.Equal(customOptions1, regex1.Options);
+
+                var customOptions2 = System.Text.RegularExpressions.RegexOptions.Multiline |
+                                   System.Text.RegularExpressions.RegexOptions.IgnoreCase;
+                var regex2 = pattern.Compile(customOptions2);
+                Assert.Equal(customOptions2, regex2.Options);
+
+                var customOptions3 = System.Text.RegularExpressions.RegexOptions.None;
+                var regex3 = pattern.Compile(customOptions3);
+                Assert.Equal(customOptions3, regex3.Options);
+
+                return true;
+            }
+        );
 }

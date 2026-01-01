@@ -11,6 +11,19 @@ public abstract record Pattern
         string.IsNullOrEmpty(chars) ? throw new ArgumentException("Character set cannot be null or empty", nameof(chars)) : new CharSet(chars);
     public static Pattern Match(Pattern inner) =>
         inner is null ? throw new ArgumentNullException(nameof(inner)) : new MatchRoot(inner);
+
+    public sealed override string ToString()
+    {
+        try
+        {
+            return this.Build();
+        }
+        catch
+        {
+            // Fallback to default record ToString if Build fails
+            return base.ToString() ?? string.Empty;
+        }
+    }
 }
 
 public static class PatternExtensions
@@ -45,6 +58,33 @@ public static class PatternExtensions
     public static Pattern Many(this Pattern pattern) =>
         pattern is null ? throw new ArgumentNullException(nameof(pattern)) :
         new Repeat(pattern, new Many());
+
+    public static string Build(this Pattern pattern)
+    {
+        var result = PatternValidation.ValidatePattern(pattern)
+            .Map(PatternOptimization.OptimizePattern)
+            .Map(RegexBuilder.BuildRegexString);
+
+        return result.IsSuccess
+            ? result.Value
+            : throw new InvalidOperationException($"Pattern build failed: {result.ErrorMessage}");
+    }
+
+    public static System.Text.RegularExpressions.Regex Compile(this Pattern pattern) =>
+        pattern.Compile(System.Text.RegularExpressions.RegexOptions.Compiled | System.Text.RegularExpressions.RegexOptions.NonBacktracking);
+
+    public static System.Text.RegularExpressions.Regex Compile(this Pattern pattern, System.Text.RegularExpressions.RegexOptions options)
+    {
+        var regexString = pattern.Build();
+        try
+        {
+            return new System.Text.RegularExpressions.Regex(regexString, options);
+        }
+        catch (System.ArgumentException ex)
+        {
+            throw new InvalidOperationException($"Invalid regex pattern: {ex.Message}", ex);
+        }
+    }
 }
 
 public abstract record Count;
