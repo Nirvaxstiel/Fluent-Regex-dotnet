@@ -47,15 +47,15 @@ public class RealWorldTests
     public void RealWorldScenario_BuildIntegration()
     {
         var emailPattern = Pattern
-            .OneOf("abcdefghijklmnopqrstuvwxyz")
+            .LowerLetter()
             .OneOrMore()
             .Then("@")
-            .Then(Pattern.OneOf("abcdefghijklmnopqrstuvwxyz").OneOrMore())
+            .Then(Pattern.LowerLetter().OneOrMore())
             .Then(".")
-            .Then(Pattern.OneOf("abcdefghijklmnopqrstuvwxyz").Between(2, 4));
+            .Then(Pattern.LowerLetter().Between(2, 4));
 
         // Option 1: Build to string, user creates Regex
-        var regexString = emailPattern.Build();
+        var regexString = emailPattern.ToString();
         var regex = new System.Text.RegularExpressions.Regex(regexString);
         Assert.Matches(regex, "test@example.com");
         Assert.DoesNotMatch(regex, "invalid-email");
@@ -89,7 +89,7 @@ public class RealWorldTests
             .Then("-")
             .Then(Pattern.Digit().Exactly(4));
 
-        var phoneRegexString = phonePattern.Build();
+        var phoneRegexString = phonePattern.ToString();
         var phoneRegex = new System.Text.RegularExpressions.Regex(phoneRegexString);
         Assert.Matches(phoneRegex, "123-456-7890");
         Assert.DoesNotMatch(phoneRegex, "12-345-6789");
