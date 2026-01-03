@@ -5,10 +5,11 @@ A fluent API for building regular expressions in C# that you can actually read.
 Instead of writing `^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,6}$`, write this:
 
 ```csharp
-var emailPattern = Pattern.OneOf("a-zA-Z0-9._-")
+var emailPattern = Pattern.AlphaNumeric()
+    .Then(Pattern.OneOf("._-"))
     .OneOrMore()
     .Then("@")
-    .Then(Pattern.OneOf("a-zA-Z0-9.-").OneOrMore())
+    .Then(Pattern.AlphaNumeric().Then(Pattern.OneOf(".-")).OneOrMore())
     .Then(".")
     .Then(Pattern.Letter().Between(2, 6));
 
@@ -25,7 +26,7 @@ using FluentRegex;
 // Basic patterns
 var digits = Pattern.Digit().Exactly(3);           // \d{3}
 var optional = Pattern.Text("www.").Optional();    // (?:www\.)?
-var choice = Pattern.OneOf("abc").OneOrMore();     // [abc]+
+var letters = Pattern.Letter().OneOrMore();        // [a-zA-Z]+
 
 // Chain them together
 var phonePattern = Pattern.Match(
@@ -110,7 +111,16 @@ pattern.Compile(RegexOptions.IgnoreCase)  // Get .NET Regex with custom options
 ## Installation
 
 ```bash
-dotnet add package FluentRegex
+# Clone and build locally (package not yet published)
+git clone https://github.com/nirvaxstiel/FluentRegex-dotnet.git
+cd FluentRegex-dotnet
+dotnet build
+```
+
+Or add as a project reference:
+
+```bash
+dotnet add reference path/to/FluentRegex.csproj
 ```
 
 ## Requirements
