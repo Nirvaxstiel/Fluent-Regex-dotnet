@@ -8,6 +8,17 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <EnablePreviewFeatures>true</EnablePreviewFeatures>
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+
+    <!-- Package metadata -->
+    <PackageId>FluentRegex</PackageId>
+    <Authors>Your Name</Authors>
+    <Description>A fluent API for building regular expressions in C# that you can actually read</Description>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+
+    <!-- Code coverage -->
+    <CollectCoverage>true</CollectCoverage>
+    <CoverletOutputFormat>cobertura</CoverletOutputFormat>
+    <CoverletOutput>./coverage.cobertura.xml</CoverletOutput>
   </PropertyGroup>
 
   <ItemGroup>
@@ -28,6 +39,10 @@
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
     <PackageReference Include="xunit" Version="2.9.2" />
     <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" />
+    <PackageReference Include="coverlet.collector" Version="6.0.2">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
+    </PackageReference>
   </ItemGroup>
 
 </Project>
