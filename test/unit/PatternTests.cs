@@ -2,14 +2,14 @@ namespace FluentRegex.Tests;
 
 using CsCheck;
 using Xunit;
+using RegexOptions = System.Text.RegularExpressions.RegexOptions;
 
 public class PatternTests
 {
     [Fact]
     public void ImmutablePatternConstruction() =>
-        Check.Sample(
-            Gen.String[1, 50],
-            text =>
+        Gen.String[1, 50]
+            .Sample(text =>
             {
                 Text originalText = text;
                 var sequenceWithText = new Sequence(originalText, new Digit());
@@ -60,8 +60,7 @@ public class PatternTests
                 Assert.Equal(8, originalBetween.Max);
 
                 return true;
-            }
-        );
+            });
 
     [Fact]
     public void FactoryFunctionCorrectness() =>
@@ -175,7 +174,10 @@ public class PatternTests
                 var stackedRepeat = new Repeat(innerRepeat, new Optional());
                 var stackedResult = PatternValidation.ValidatePattern(stackedRepeat);
                 Assert.False(stackedResult.IsSuccess);
-                Assert.Contains("Stacked repetition patterns must be merged", stackedResult.ErrorMessage);
+                Assert.Contains(
+                    "Stacked repetition patterns must be merged",
+                    stackedResult.ErrorMessage
+                );
 
                 var validPattern = Pattern.Text(text).Then(Pattern.Digit()).Optional();
                 var validResult = PatternValidation.ValidatePattern(validPattern);
@@ -255,7 +257,10 @@ public class PatternTests
                 Assert.IsType<Text>(mergedText);
                 Assert.Equal(text1 + text2, ((Text)mergedText).Value);
 
-                var nestedLeft = new Sequence(new Sequence(new Text(text1), new Digit()), new Text(text2));
+                var nestedLeft = new Sequence(
+                    new Sequence(new Text(text1), new Digit()),
+                    new Text(text2)
+                );
                 var flattenedLeft = PatternOptimization.OptimizePattern(nestedLeft);
                 Assert.IsType<Sequence>(flattenedLeft);
                 var leftSeq = (Sequence)flattenedLeft;
@@ -265,11 +270,17 @@ public class PatternTests
                 Assert.IsType<Digit>(rightSeq.Left);
                 Assert.IsType<Text>(rightSeq.Right);
 
-                var nestedRight = new Sequence(new Text(text1), new Sequence(new Digit(), new Text(text2)));
+                var nestedRight = new Sequence(
+                    new Text(text1),
+                    new Sequence(new Digit(), new Text(text2))
+                );
                 var flattenedRight = PatternOptimization.OptimizePattern(nestedRight);
                 Assert.IsType<Sequence>(flattenedRight);
 
-                var stackedExactly = new Repeat(new Repeat(new Digit(), new Exactly(count1)), new Exactly(count2));
+                var stackedExactly = new Repeat(
+                    new Repeat(new Digit(), new Exactly(count1)),
+                    new Exactly(count2)
+                );
                 var combinedExactly = PatternOptimization.OptimizePattern(stackedExactly);
                 Assert.IsType<Repeat>(combinedExactly);
                 var exactlyRepeat = (Repeat)combinedExactly;
@@ -277,21 +288,30 @@ public class PatternTests
                 Assert.IsType<Exactly>(exactlyRepeat.Count);
                 Assert.Equal(count1 * count2, ((Exactly)exactlyRepeat.Count).Value);
 
-                var stackedOptional = new Repeat(new Repeat(new Digit(), new Optional()), new Optional());
+                var stackedOptional = new Repeat(
+                    new Repeat(new Digit(), new Optional()),
+                    new Optional()
+                );
                 var combinedOptional = PatternOptimization.OptimizePattern(stackedOptional);
                 Assert.IsType<Repeat>(combinedOptional);
                 var optionalRepeat = (Repeat)combinedOptional;
                 Assert.IsType<Digit>(optionalRepeat.Inner);
                 Assert.IsType<Optional>(optionalRepeat.Count);
 
-                var stackedOneOrMore = new Repeat(new Repeat(new Digit(), new OneOrMore()), new OneOrMore());
+                var stackedOneOrMore = new Repeat(
+                    new Repeat(new Digit(), new OneOrMore()),
+                    new OneOrMore()
+                );
                 var combinedOneOrMore = PatternOptimization.OptimizePattern(stackedOneOrMore);
                 Assert.IsType<Repeat>(combinedOneOrMore);
                 var oneOrMoreRepeat = (Repeat)combinedOneOrMore;
                 Assert.IsType<Digit>(oneOrMoreRepeat.Inner);
                 Assert.IsType<OneOrMore>(oneOrMoreRepeat.Count);
 
-                var optionalThenOneOrMore = new Repeat(new Repeat(new Digit(), new Optional()), new OneOrMore());
+                var optionalThenOneOrMore = new Repeat(
+                    new Repeat(new Digit(), new Optional()),
+                    new OneOrMore()
+                );
                 var combinedMany = PatternOptimization.OptimizePattern(optionalThenOneOrMore);
                 Assert.IsType<Repeat>(combinedMany);
                 var manyRepeat = (Repeat)combinedMany;
@@ -334,7 +354,7 @@ public class PatternTests
                 {
                     0 => @"\d",
                     1 => @"\d",
-                    _ => $@"\d{{{count}}}"
+                    _ => $@"\d{{{count}}}",
                 };
 
                 if (count == 0)
@@ -351,7 +371,7 @@ public class PatternTests
                     (1, int.MaxValue) => @"\d+",
                     (0, int.MaxValue) => @"\d*",
                     _ when min == max => $@"\d{{{min}}}",
-                    _ => $@"\d{{{min},{max}}}"
+                    _ => $@"\d{{{min},{max}}}",
                 };
 
                 Assert.Equal(expectedBetween, betweenRegex);
@@ -374,7 +394,7 @@ public class PatternTests
 
                 var textPattern = Pattern.Text("hello").Exactly(3);
                 var textRegex = RegexBuilder.BuildRegexString(textPattern);
-                Assert.Equal(@"hello{3}", textRegex);
+                Assert.Equal("hello{3}", textRegex);
 
                 return true;
             }
@@ -441,13 +461,13 @@ public class PatternTests
 
         // Test Compile() method with default options
         var compiledRegex = sequencePattern.Compile();
-        Assert.Equal(System.Text.RegularExpressions.RegexOptions.Compiled | System.Text.RegularExpressions.RegexOptions.NonBacktracking, compiledRegex.Options);
+        Assert.Equal(RegexOptions.Compiled | RegexOptions.NonBacktracking, compiledRegex.Options);
         Assert.Matches(compiledRegex, "hello5");
         Assert.DoesNotMatch(compiledRegex, "hello");
 
         // Test Compile() method with custom options
-        var customRegex = sequencePattern.Compile(System.Text.RegularExpressions.RegexOptions.IgnoreCase);
-        Assert.Equal(System.Text.RegularExpressions.RegexOptions.IgnoreCase, customRegex.Options);
+        var customRegex = sequencePattern.Compile(RegexOptions.IgnoreCase);
+        Assert.Equal(RegexOptions.IgnoreCase, customRegex.Options);
         Assert.Matches(customRegex, "hello5");
     }
 
@@ -469,7 +489,8 @@ public class PatternTests
                 Assert.Equal(result1, result2);
 
                 var complexPattern = Pattern.Match(
-                    Pattern.OneOf("abc")
+                    Pattern
+                        .OneOf("abc")
                         .Then(Pattern.Digit().Between(2, 5))
                         .Then(Pattern.Text(text).Optional())
                 );
@@ -501,7 +522,10 @@ public class PatternTests
                 var nestedMatch = new MatchRoot(new MatchRoot(Pattern.Digit()));
                 Assert.Throws<InvalidOperationException>(() => nestedMatch.Build());
 
-                var stackedRepeat = new Repeat(new Repeat(Pattern.Digit(), new Exactly(2)), new Optional());
+                var stackedRepeat = new Repeat(
+                    new Repeat(Pattern.Digit(), new Exactly(2)),
+                    new Optional()
+                );
                 Assert.Throws<InvalidOperationException>(() => stackedRepeat.Build());
 
                 return true;
@@ -525,7 +549,8 @@ public class PatternTests
                 var expectedEscaped = RegexBuilder.BuildRegexString(new Text(text1 + text2));
                 Assert.Equal(expectedEscaped, mergedResult);
 
-                var complexPattern = Pattern.Text(text1)
+                var complexPattern = Pattern
+                    .Text(text1)
                     .Then(Pattern.Digit().Exactly(3))
                     .Then(Pattern.Text(text2));
                 var complexResult = complexPattern.Build();
@@ -550,8 +575,8 @@ public class PatternTests
                 var pattern = Pattern.Text(text).Then(Pattern.Digit().Exactly(count));
                 var compiledRegex = pattern.Compile();
 
-                var expectedOptions = System.Text.RegularExpressions.RegexOptions.Compiled |
-                                    System.Text.RegularExpressions.RegexOptions.NonBacktracking;
+                const RegexOptions expectedOptions =
+                    RegexOptions.Compiled | RegexOptions.NonBacktracking;
                 Assert.Equal(expectedOptions, compiledRegex.Options);
 
                 var testString = text + new string('5', count);
@@ -573,16 +598,16 @@ public class PatternTests
 
                 var pattern = Pattern.Text(text).Then(Pattern.Digit().Exactly(count));
 
-                var customOptions1 = System.Text.RegularExpressions.RegexOptions.IgnoreCase;
+                const RegexOptions customOptions1 = RegexOptions.IgnoreCase;
                 var regex1 = pattern.Compile(customOptions1);
                 Assert.Equal(customOptions1, regex1.Options);
 
-                var customOptions2 = System.Text.RegularExpressions.RegexOptions.Multiline |
-                                   System.Text.RegularExpressions.RegexOptions.IgnoreCase;
+                const RegexOptions customOptions2 =
+                    RegexOptions.Multiline | RegexOptions.IgnoreCase;
                 var regex2 = pattern.Compile(customOptions2);
                 Assert.Equal(customOptions2, regex2.Options);
 
-                var customOptions3 = System.Text.RegularExpressions.RegexOptions.None;
+                const RegexOptions customOptions3 = RegexOptions.None;
                 var regex3 = pattern.Compile(customOptions3);
                 Assert.Equal(customOptions3, regex3.Options);
 
@@ -593,9 +618,10 @@ public class PatternTests
     [Fact]
     public void NamedCaptureSupport() =>
         Check.Sample(
-            from name in Gen.String[1, 20].Where(s => !string.IsNullOrEmpty(s) &&
-                                                      s.All(char.IsLetterOrDigit) &&
-                                                      char.IsLetter(s[0]))
+            from name in Gen.String[1, 20]
+                .Where(s =>
+                    !string.IsNullOrEmpty(s) && s.All(char.IsLetterOrDigit) && char.IsLetter(s[0])
+                )
             from text in Gen.String[1, 20].Where(s => !string.IsNullOrEmpty(s))
             from count in Gen.Int[1, 10]
             select (name, text, count),
@@ -627,7 +653,7 @@ public class PatternTests
                 {
                     0 => $"(?<{name}>\\d)",
                     1 => $"(?<{name}>\\d)",
-                    _ => $"(?<{name}>\\d{{{count}}})"
+                    _ => $"(?<{name}>\\d{{{count}}})",
                 };
                 Assert.Equal(expectedRegex, regexString);
 
@@ -670,7 +696,23 @@ public class PatternTests
     public void SpecialRegexCharactersInTextPatterns()
     {
         // Test all special regex characters are properly escaped
-        var specialChars = new[] { '.', '^', '$', '*', '+', '?', '(', ')', '[', ']', '{', '}', '|', '\\' };
+        var specialChars = new[]
+        {
+            '.',
+            '^',
+            '$',
+            '*',
+            '+',
+            '?',
+            '(',
+            ')',
+            '[',
+            ']',
+            '{',
+            '}',
+            '|',
+            '\\',
+        };
 
         foreach (var specialChar in specialChars)
         {
@@ -686,7 +728,7 @@ public class PatternTests
         }
 
         // Test combination of special characters
-        var complexSpecialText = ".*+?()[]{}|\\^$";
+        const string complexSpecialText = ".*+?()[]{}|\\^$";
         var complexPattern = Pattern.Text(complexSpecialText);
         var complexRegex = complexPattern.Build();
 
@@ -718,7 +760,7 @@ public class PatternTests
         }
 
         // Test normal characters in character sets
-        var normalChars = "abc123";
+        const string normalChars = "abc123";
         var normalPattern = Pattern.OneOf(normalChars);
         var normalRegex = normalPattern.Build();
         Assert.Equal("[abc123]", normalRegex);
@@ -769,7 +811,8 @@ public class PatternTests
     public void ComplexNestedPatternCombinations()
     {
         // Test deeply nested sequences
-        var deeplyNested = Pattern.Text("a")
+        var deeplyNested = Pattern
+            .Text("a")
             .Then(Pattern.Text("b").Then(Pattern.Text("c").Then(Pattern.Text("d"))))
             .Then(Pattern.Text("e"));
 
@@ -778,7 +821,8 @@ public class PatternTests
         Assert.Equal("abcde", ((Text)optimized).Value);
 
         // Test nested repetitions with different counts
-        var nestedRepetitions = Pattern.Digit()
+        var nestedRepetitions = Pattern
+            .Digit()
             .Exactly(3)
             .Then(Pattern.Text("x").Optional())
             .Then(Pattern.OneOf("abc").OneOrMore());
@@ -787,7 +831,8 @@ public class PatternTests
         Assert.Equal("\\d{3}x?[abc]+", nestedRegex);
 
         // Test complex capture nesting
-        var complexCapture = Pattern.Text("start")
+        var complexCapture = Pattern
+            .Text("start")
             .Then(Pattern.Digit().Exactly(3).Capture("numbers"))
             .Then(Pattern.OneOf("abc").OneOrMore().Capture("letters"))
             .Then(Pattern.Text("end"));
@@ -797,7 +842,8 @@ public class PatternTests
 
         // Test Match with complex inner pattern
         var matchWithComplex = Pattern.Match(
-            Pattern.Text("prefix")
+            Pattern
+                .Text("prefix")
                 .Then(Pattern.Digit().Between(2, 4))
                 .Then(Pattern.OneOf("xyz").Optional())
                 .Then(Pattern.Text("suffix"))
@@ -807,9 +853,11 @@ public class PatternTests
         Assert.Equal("^prefix\\d{2,4}[xyz]?suffix$", matchRegex);
 
         // Test multiple levels of grouping
-        var multiLevel = Pattern.Text("outer")
+        var multiLevel = Pattern
+            .Text("outer")
             .Then(
-                Pattern.Text("(")
+                Pattern
+                    .Text("(")
                     .Then(Pattern.Digit().OneOrMore())
                     .Then(Pattern.Text(","))
                     .Then(Pattern.Digit().OneOrMore())
@@ -832,7 +880,10 @@ public class PatternTests
         Assert.Contains("Nested Match patterns are not allowed", result.ErrorMessage);
 
         // Test validation catches deeply nested Repeat patterns
-        var deepRepeat = new Repeat(new Repeat(new Repeat(Pattern.Digit(), new Exactly(2)), new Optional()), new OneOrMore());
+        var deepRepeat = new Repeat(
+            new Repeat(new Repeat(Pattern.Digit(), new Exactly(2)), new Optional()),
+            new OneOrMore()
+        );
         var repeatResult = PatternValidation.ValidatePattern(deepRepeat);
         Assert.False(repeatResult.IsSuccess);
         Assert.Contains("Stacked repetition patterns must be merged", repeatResult.ErrorMessage);
@@ -841,27 +892,42 @@ public class PatternTests
         var nullMatchRoot = new MatchRoot(null!);
         var nullMatchResult = PatternValidation.ValidatePattern(nullMatchRoot);
         Assert.False(nullMatchResult.IsSuccess);
-        Assert.Contains("Match pattern cannot contain null inner pattern", nullMatchResult.ErrorMessage);
+        Assert.Contains(
+            "Match pattern cannot contain null inner pattern",
+            nullMatchResult.ErrorMessage
+        );
 
         var nullRepeat = new Repeat(null!, new Exactly(3));
         var nullRepeatResult = PatternValidation.ValidatePattern(nullRepeat);
         Assert.False(nullRepeatResult.IsSuccess);
-        Assert.Contains("Repeat pattern cannot contain null inner pattern", nullRepeatResult.ErrorMessage);
+        Assert.Contains(
+            "Repeat pattern cannot contain null inner pattern",
+            nullRepeatResult.ErrorMessage
+        );
 
         var nullCapture = new Capture("test", null!);
         var nullCaptureResult = PatternValidation.ValidatePattern(nullCapture);
         Assert.False(nullCaptureResult.IsSuccess);
-        Assert.Contains("Capture pattern cannot contain null inner pattern", nullCaptureResult.ErrorMessage);
+        Assert.Contains(
+            "Capture pattern cannot contain null inner pattern",
+            nullCaptureResult.ErrorMessage
+        );
 
         var nullSequenceLeft = new Sequence(null!, Pattern.Digit());
         var nullSequenceLeftResult = PatternValidation.ValidatePattern(nullSequenceLeft);
         Assert.False(nullSequenceLeftResult.IsSuccess);
-        Assert.Contains("Sequence pattern cannot contain null left pattern", nullSequenceLeftResult.ErrorMessage);
+        Assert.Contains(
+            "Sequence pattern cannot contain null left pattern",
+            nullSequenceLeftResult.ErrorMessage
+        );
 
         var nullSequenceRight = new Sequence(Pattern.Digit(), null!);
         var nullSequenceRightResult = PatternValidation.ValidatePattern(nullSequenceRight);
         Assert.False(nullSequenceRightResult.IsSuccess);
-        Assert.Contains("Sequence pattern cannot contain null right pattern", nullSequenceRightResult.ErrorMessage);
+        Assert.Contains(
+            "Sequence pattern cannot contain null right pattern",
+            nullSequenceRightResult.ErrorMessage
+        );
     }
 
     [Fact]
@@ -900,5 +966,4 @@ public class PatternTests
         var zeroToMaxRegex = zeroToMaxPattern.Build();
         Assert.Equal("\\d*", zeroToMaxRegex); // Should optimize to *
     }
-
 }

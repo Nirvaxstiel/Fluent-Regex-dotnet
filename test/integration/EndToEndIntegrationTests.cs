@@ -1,8 +1,8 @@
 namespace FluentRegex.Tests.Integration;
 
+using System.Text.RegularExpressions;
 using FluentRegex;
 using FluentRegex.Common;
-using System.Text.RegularExpressions;
 using Xunit;
 
 /// <summary>
@@ -15,12 +15,19 @@ public class EndToEndIntegrationTests
     public void CompleteEmailValidationFlow()
     {
         // Build pattern using fluent API
-        var emailPattern = Pattern.OneOf("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._-")
+        var emailPattern = Pattern
+            .OneOf("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._-")
             .OneOrMore()
             .Then("@")
-            .Then(Pattern.OneOf("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.-").OneOrMore())
+            .Then(
+                Pattern
+                    .OneOf("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.-")
+                    .OneOrMore()
+            )
             .Then(".")
-            .Then(Pattern.OneOf("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ").Between(2, 6));
+            .Then(
+                Pattern.OneOf("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ").Between(2, 6)
+            );
 
         // Validate pattern structure
         var validationResult = PatternValidation.ValidatePattern(emailPattern);
@@ -55,7 +62,9 @@ public class EndToEndIntegrationTests
     {
         // Build phone pattern that requires exact length - use Match for anchoring
         var phonePattern = Pattern.Match(
-            Pattern.Text("(").Optional()
+            Pattern
+                .Text("(")
+                .Optional()
                 .Then(Pattern.Digit().Exactly(3))
                 .Then(Pattern.Text(")").Optional())
                 .Then(Pattern.OneOf(" -").Optional())
@@ -90,10 +99,15 @@ public class EndToEndIntegrationTests
     public void CompleteUrlValidationFlow()
     {
         // Build simpler URL pattern that will work correctly
-        var urlPattern = Pattern.Text("http")
+        var urlPattern = Pattern
+            .Text("http")
             .Then(Pattern.Text("s").Optional())
             .Then("://")
-            .Then(Pattern.OneOf("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.-").OneOrMore());
+            .Then(
+                Pattern
+                    .OneOf("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.-")
+                    .OneOrMore()
+            );
 
         // Complete flow with custom regex options
         var validationResult = PatternValidation.ValidatePattern(urlPattern);
@@ -119,7 +133,8 @@ public class EndToEndIntegrationTests
     public void CompleteNamedCaptureFlow()
     {
         // Build pattern with multiple named captures
-        var logPattern = Pattern.Text("[")
+        var logPattern = Pattern
+            .Text("[")
             .Then(Pattern.Digit().Between(4, 4).Capture("year"))
             .Then("-")
             .Then(Pattern.Digit().Between(2, 2).Capture("month"))
@@ -128,7 +143,12 @@ public class EndToEndIntegrationTests
             .Then("] ")
             .Then(Pattern.OneOf("ABCDEFGHIJKLMNOPQRSTUVWXYZ").OneOrMore().Capture("level"))
             .Then(": ")
-            .Then(Pattern.OneOf("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 .,!?").OneOrMore().Capture("message"));
+            .Then(
+                Pattern
+                    .OneOf("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 .,!?")
+                    .OneOrMore()
+                    .Capture("message")
+            );
 
         // Full validation and compilation
         var validationResult = PatternValidation.ValidatePattern(logPattern);
@@ -151,9 +171,7 @@ public class EndToEndIntegrationTests
     {
         // Build anchored pattern for exact matching
         var exactPattern = Pattern.Match(
-            Pattern.Text("START")
-                .Then(Pattern.Digit().Between(3, 5))
-                .Then("END")
+            Pattern.Text("START").Then(Pattern.Digit().Between(3, 5)).Then("END")
         );
 
         // Validate, optimize, and compile
@@ -185,13 +203,24 @@ public class EndToEndIntegrationTests
         var datePattern = Common.Date();
         var customDatePattern = Common.Date("-");
 
-        var patterns = new[] { emailPattern, phonePattern, urlPattern, ipv4Pattern, datePattern, customDatePattern };
+        var patterns = new[]
+        {
+            emailPattern,
+            phonePattern,
+            urlPattern,
+            ipv4Pattern,
+            datePattern,
+            customDatePattern,
+        };
 
         foreach (var pattern in patterns)
         {
             // Each pattern should pass validation
             var validationResult = PatternValidation.ValidatePattern(pattern);
-            Assert.True(validationResult.IsSuccess, $"Pattern validation failed for {pattern.GetType().Name}");
+            Assert.True(
+                validationResult.IsSuccess,
+                $"Pattern validation failed for {pattern.GetType().Name}"
+            );
 
             // Each pattern should optimize without errors
             var optimizedPattern = PatternOptimization.OptimizePattern(pattern);
@@ -229,7 +258,10 @@ public class EndToEndIntegrationTests
         var stackedRepeat = new Repeat(new Repeat(Pattern.Digit(), new Exactly(2)), new Optional());
         var stackedValidation = PatternValidation.ValidatePattern(stackedRepeat);
         Assert.False(stackedValidation.IsSuccess);
-        Assert.Contains("Stacked repetition patterns must be merged", stackedValidation.ErrorMessage);
+        Assert.Contains(
+            "Stacked repetition patterns must be merged",
+            stackedValidation.ErrorMessage
+        );
 
         Assert.Throws<InvalidOperationException>(() => stackedRepeat.Build());
 
@@ -251,7 +283,8 @@ public class EndToEndIntegrationTests
         // Test optimization through complete pipeline with complex patterns
 
         // 1. Adjacent text merging
-        var adjacentTexts = Pattern.Text("hello")
+        var adjacentTexts = Pattern
+            .Text("hello")
             .Then(Pattern.Text(" "))
             .Then(Pattern.Text("world"))
             .Then(Pattern.Text("!"));
@@ -264,7 +297,8 @@ public class EndToEndIntegrationTests
         Assert.Matches(compiledAdjacent, "hello world!");
 
         // 2. Nested sequence flattening
-        var nestedSequences = Pattern.Text("a")
+        var nestedSequences = Pattern
+            .Text("a")
             .Then(Pattern.Text("b").Then(Pattern.Text("c").Then(Pattern.Text("d"))))
             .Then(Pattern.Text("e"));
 
@@ -276,7 +310,10 @@ public class EndToEndIntegrationTests
         Assert.Matches(compiledNested, "abcde");
 
         // 3. Repetition count merging - test the optimized result directly
-        var stackedExactly = new Repeat(new Repeat(Pattern.Digit(), new Exactly(3)), new Exactly(2));
+        var stackedExactly = new Repeat(
+            new Repeat(Pattern.Digit(), new Exactly(3)),
+            new Exactly(2)
+        );
         var optimizedStacked = PatternOptimization.OptimizePattern(stackedExactly);
         Assert.IsType<Repeat>(optimizedStacked);
         var optimizedRepeat = (Repeat)optimizedStacked;
@@ -330,7 +367,8 @@ public class EndToEndIntegrationTests
     public void CompleteToStringIntegrationFlow()
     {
         // Test ToString() method integration with the complete pipeline
-        var complexPattern = Pattern.Text("prefix")
+        var complexPattern = Pattern
+            .Text("prefix")
             .Then(Pattern.Digit().Between(2, 4).Capture("numbers"))
             .Then(Pattern.OneOf("abc").Optional())
             .Then(Pattern.Text("suffix"));
@@ -363,7 +401,7 @@ public class EndToEndIntegrationTests
             RegexOptions.Singleline,
             RegexOptions.IgnoreCase | RegexOptions.Multiline,
             RegexOptions.Compiled,
-            RegexOptions.ExplicitCapture
+            RegexOptions.ExplicitCapture,
         };
 
         foreach (var option in options)

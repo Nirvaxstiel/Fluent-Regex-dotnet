@@ -18,7 +18,10 @@ public class DataAnnotationsComparisonTests
     [InlineData("@domain.com", false, false)]
     [InlineData("", false, false)]
     public void EmailValidation_FluentRegexVsDataAnnotations_ShouldHaveSimilarBehavior(
-        string input, bool expectedFluentRegex, bool expectedDataAnnotations)
+        string input,
+        bool expectedFluentRegex,
+        bool expectedDataAnnotations
+    )
     {
         // Arrange
         var fluentRegexPattern = Common.Email().Compile();
@@ -41,7 +44,10 @@ public class DataAnnotationsComparisonTests
     [InlineData("123", false, true)] // DataAnnotations is more permissive than FluentRegex
     [InlineData("", false, false)]
     public void PhoneValidation_FluentRegexVsDataAnnotations_ShowsBehavioralDifferences(
-        string input, bool expectedFluentRegex, bool expectedDataAnnotations)
+        string input,
+        bool expectedFluentRegex,
+        bool expectedDataAnnotations
+    )
     {
         // Arrange
         var fluentRegexPattern = Common.Phone().Compile();
@@ -59,12 +65,15 @@ public class DataAnnotationsComparisonTests
     [Theory]
     [InlineData("https://www.example.com", true, true)]
     [InlineData("http://example.com", false, true)] // FluentRegex has stricter www requirement
-    [InlineData("https://example.com", false, true)] // FluentRegex has stricter www requirement  
+    [InlineData("https://example.com", false, true)] // FluentRegex has stricter www requirement
     [InlineData("invalid-url", false, false)]
     [InlineData("www.example.com", false, false)]
     [InlineData("", false, false)]
     public void UrlValidation_FluentRegexVsDataAnnotations_ShowsBehavioralDifferences(
-        string input, bool expectedFluentRegex, bool expectedDataAnnotations)
+        string input,
+        bool expectedFluentRegex,
+        bool expectedDataAnnotations
+    )
     {
         // Arrange
         var fluentRegexPattern = Common.Url().Compile();
@@ -90,24 +99,30 @@ public class DataAnnotationsComparisonTests
         {
             "4111111111111111", // Visa test number
             "5555555555554444", // MasterCard test number
-            "378282246310005"   // Amex test number
+            "378282246310005", // Amex test number
         };
 
         var invalidCards = new[]
         {
             "1234567890123456", // Invalid Luhn
-            "4111111111111112"  // Invalid Luhn (off by one)
+            "4111111111111112", // Invalid Luhn (off by one)
         };
 
         // Act & Assert
         foreach (var card in validCards)
         {
-            Assert.True(creditCardAttribute.IsValid(card), $"Valid card {card} should pass validation");
+            Assert.True(
+                creditCardAttribute.IsValid(card),
+                $"Valid card {card} should pass validation"
+            );
         }
 
         foreach (var card in invalidCards)
         {
-            Assert.False(creditCardAttribute.IsValid(card), $"Invalid card {card} should fail validation");
+            Assert.False(
+                creditCardAttribute.IsValid(card),
+                $"Invalid card {card} should fail validation"
+            );
         }
     }
 

@@ -26,7 +26,13 @@ public class RealWorldTests
         Pattern separator2 = Pattern.Text("-");
         Pattern number = Pattern.Text("7890");
 
-        var phonePattern = areaCodeStart.Then(areaCode).Then(areaCodeEnd).Then(separator1).Then(exchange).Then(separator2).Then(number);
+        var phonePattern = areaCodeStart
+            .Then(areaCode)
+            .Then(areaCodeEnd)
+            .Then(separator1)
+            .Then(exchange)
+            .Then(separator2)
+            .Then(number);
         var optimized = PatternOptimization.OptimizePattern(phonePattern);
 
         Assert.IsType<Sequence>(optimized);
@@ -40,7 +46,8 @@ public class RealWorldTests
     [Fact]
     public void RealWorldScenario_BuildIntegration()
     {
-        var emailPattern = Pattern.OneOf("abcdefghijklmnopqrstuvwxyz")
+        var emailPattern = Pattern
+            .OneOf("abcdefghijklmnopqrstuvwxyz")
             .OneOrMore()
             .Then("@")
             .Then(Pattern.OneOf("abcdefghijklmnopqrstuvwxyz").OneOrMore())
@@ -55,15 +62,28 @@ public class RealWorldTests
 
         // Option 2: Compile with default options
         var compiledRegex = emailPattern.Compile();
-        Assert.Equal(System.Text.RegularExpressions.RegexOptions.Compiled | System.Text.RegularExpressions.RegexOptions.NonBacktracking, compiledRegex.Options);
+        Assert.Equal(
+            System.Text.RegularExpressions.RegexOptions.Compiled
+                | System.Text.RegularExpressions.RegexOptions.NonBacktracking,
+            compiledRegex.Options
+        );
         Assert.Matches(compiledRegex, "test@example.com");
 
         // Option 3: Compile with custom options
-        var customRegex = emailPattern.Compile(System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.Multiline);
-        Assert.Equal(System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.Multiline, customRegex.Options);
+        var customRegex = emailPattern.Compile(
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase
+                | System.Text.RegularExpressions.RegexOptions.Multiline
+        );
+        Assert.Equal(
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase
+                | System.Text.RegularExpressions.RegexOptions.Multiline,
+            customRegex.Options
+        );
         Assert.Matches(customRegex, "TEST@EXAMPLE.COM");
 
-        var phonePattern = Pattern.Digit().Exactly(3)
+        var phonePattern = Pattern
+            .Digit()
+            .Exactly(3)
             .Then("-")
             .Then(Pattern.Digit().Exactly(3))
             .Then("-")
