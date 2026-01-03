@@ -173,11 +173,7 @@ public class PatternTests
                 var innerRepeat = new Repeat(Pattern.Digit(), new Exactly(2));
                 var stackedRepeat = new Repeat(innerRepeat, new Optional());
                 var stackedResult = PatternValidation.ValidatePattern(stackedRepeat);
-                Assert.False(stackedResult.IsSuccess);
-                Assert.Contains(
-                    "Stacked repetition patterns must be merged",
-                    stackedResult.ErrorMessage
-                );
+                Assert.True(stackedResult.IsSuccess); // Now allowed, will be optimized
 
                 var validPattern = Pattern.Text(text).Then(Pattern.Digit()).Optional();
                 var validResult = PatternValidation.ValidatePattern(validPattern);
@@ -528,7 +524,8 @@ public class PatternTests
                     new Optional()
                 );
                 var stackedResult = stackedRepeat.ToString();
-                Assert.NotNull(stackedResult); // Should fallback to record ToString, not throw
+                Assert.NotNull(stackedResult); // Should be optimized to valid regex
+                Assert.NotEqual("FluentRegex.Repeat", stackedResult); // Should not be record ToString
 
                 return true;
             }
@@ -698,21 +695,7 @@ public class PatternTests
     public void SpecialRegexCharactersInTextPatterns()
     {
         // Test all special regex characters are properly escaped
-        var specialChars = new[]
-        {
-            '.',
-            '^',
-            '$',
-            '*',
-            '+',
-            '?',
-            '(',
-            ')',
-            '[',
-            '{',
-            '|',
-            '\\',
-        };
+        var specialChars = new[] { '.', '^', '$', '*', '+', '?', '(', ')', '[', '{', '|', '\\' };
 
         foreach (var specialChar in specialChars)
         {
@@ -879,14 +862,13 @@ public class PatternTests
         Assert.False(result.IsSuccess);
         Assert.Contains("Nested Match patterns are not allowed", result.ErrorMessage);
 
-        // Test validation catches deeply nested Repeat patterns
+        // Test validation catches deeply nested Repeat patterns - now allowed, will be optimized
         var deepRepeat = new Repeat(
             new Repeat(new Repeat(Pattern.Digit(), new Exactly(2)), new Optional()),
             new OneOrMore()
         );
         var repeatResult = PatternValidation.ValidatePattern(deepRepeat);
-        Assert.False(repeatResult.IsSuccess);
-        Assert.Contains("Stacked repetition patterns must be merged", repeatResult.ErrorMessage);
+        Assert.True(repeatResult.IsSuccess); // Now allowed, will be optimized
 
         // Test validation with null inner patterns - these should be caught by validation, not constructors
         var nullMatchRoot = new MatchRoot(null!);
@@ -992,7 +974,7 @@ public class PatternTests
         var customRangeRegex = customRange.ToString();
         Assert.Equal("[a-z0-9]", customRangeRegex);
 
-        // Test that non-range dashes are escaped  
+        // Test that non-range dashes are escaped
         var dashPattern = Pattern.OneOf("abc-def");
         var dashRegex = dashPattern.ToString();
         Assert.Equal("[abc-def]", dashRegex); // c-d is not a valid range, so - should not be escaped

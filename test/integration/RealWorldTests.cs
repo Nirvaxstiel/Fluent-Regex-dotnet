@@ -47,12 +47,12 @@ public class RealWorldTests
     public void RealWorldScenario_BuildIntegration()
     {
         var emailPattern = Pattern
-            .OneOf("abcdefghijklmnopqrstuvwxyz")
+            .LowerLetter()
             .OneOrMore()
             .Then("@")
-            .Then(Pattern.OneOf("abcdefghijklmnopqrstuvwxyz").OneOrMore())
+            .Then(Pattern.LowerLetter().OneOrMore())
             .Then(".")
-            .Then(Pattern.OneOf("abcdefghijklmnopqrstuvwxyz").Between(2, 4));
+            .Then(Pattern.LowerLetter().Between(2, 4));
 
         // Option 1: Build to string, user creates Regex
         var regexString = emailPattern.ToString();

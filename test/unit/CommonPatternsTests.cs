@@ -8,9 +8,9 @@ public class CommonPatternsTests
 {
     [Fact]
     public void CommonPatternOptimization() =>
-        Check.Sample(
-            Gen.String[1, 20].Where(s => !string.IsNullOrEmpty(s)),
-            separator =>
+        Gen.String[1, 20]
+            .Where(s => !string.IsNullOrEmpty(s))
+            .Sample(separator =>
             {
                 var emailPattern = Common.Email();
                 var optimizedEmail = PatternOptimization.OptimizePattern(emailPattern);
@@ -37,8 +37,7 @@ public class CommonPatternsTests
                 Assert.NotNull(optimizedCustomDate);
 
                 return true;
-            }
-        );
+            });
 
     [Fact]
     public void EmailPattern_ValidatesRealEmails()

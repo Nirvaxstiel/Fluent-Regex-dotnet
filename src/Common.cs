@@ -15,7 +15,8 @@ public static class Common
     /// </summary>
     /// <returns>A pattern that matches basic email address format.</returns>
     public static Pattern Email() =>
-        Pattern.OneOf("a-zA-Z0-9._-")
+        Pattern
+            .OneOf("a-zA-Z0-9._-")
             .OneOrMore()
             .Then("@")
             .Then(Pattern.OneOf("a-zA-Z0-9.-").OneOrMore())

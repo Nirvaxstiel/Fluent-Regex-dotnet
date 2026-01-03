@@ -83,14 +83,12 @@ public abstract record Pattern
     {
         try
         {
+            var optimized = PatternOptimization.OptimizePattern(this);
             var result = PatternValidation
-                .ValidatePattern(this)
-                .Map(PatternOptimization.OptimizePattern)
+                .ValidatePattern(optimized)
                 .Map(RegexBuilder.BuildRegexString);
 
-            return result.IsSuccess
-                ? result.Value
-                : base.ToString() ?? string.Empty;
+            return result.IsSuccess ? result.Value : base.ToString() ?? string.Empty;
         }
         catch
         {
@@ -412,9 +410,6 @@ public static class PatternValidation
             MatchRoot { Inner: null } => Result<Pattern>.Error(
                 "Match pattern cannot contain null inner pattern"
             ),
-            Repeat { Inner: Repeat } => Result<Pattern>.Error(
-                "Stacked repetition patterns must be merged"
-            ),
             Repeat { Inner: null } => Result<Pattern>.Error(
                 "Repeat pattern cannot contain null inner pattern"
             ),
@@ -577,10 +572,12 @@ public static class RegexBuilder
                     builder.Append(c);
                     break;
                 case '-':
-                    var isValidRange = i > 0 && i < chars.Length - 1 &&
-                                       IsValidRangeCharacter(chars[i - 1]) &&
-                                       IsValidRangeCharacter(chars[i + 1]) &&
-                                       chars[i - 1] < chars[i + 1];
+                    var isValidRange =
+                        i > 0
+                        && i < chars.Length - 1
+                        && IsValidRangeCharacter(chars[i - 1])
+                        && IsValidRangeCharacter(chars[i + 1])
+                        && chars[i - 1] < chars[i + 1];
                     if (!isValidRange)
                         builder.Append('\\');
                     builder.Append(c);
