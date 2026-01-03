@@ -15,12 +15,19 @@ public static class Common
     /// </summary>
     /// <returns>A pattern that matches basic email address format.</returns>
     public static Pattern Email() =>
-        Pattern.OneOf("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._-")
+        Pattern
+            .OneOf("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._-")
             .OneOrMore()
             .Then("@")
-            .Then(Pattern.OneOf("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.-").OneOrMore())
+            .Then(
+                Pattern
+                    .OneOf("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.-")
+                    .OneOrMore()
+            )
             .Then(".")
-            .Then(Pattern.OneOf("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ").Between(2, 6));
+            .Then(
+                Pattern.OneOf("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ").Between(2, 6)
+            );
 
     /// <summary>
     /// Creates a pattern for validating US phone numbers with optional formatting.
@@ -28,7 +35,9 @@ public static class Common
     /// </summary>
     /// <returns>A pattern that matches US phone number formats with optional parentheses, spaces, and hyphens.</returns>
     public static Pattern Phone() =>
-        Pattern.Text("(").Optional()
+        Pattern
+            .Text("(")
+            .Optional()
             .Then(Pattern.Digit().Exactly(3))
             .Then(Pattern.Text(")").Optional())
             .Then(Pattern.OneOf(" -").Optional())
@@ -42,12 +51,23 @@ public static class Common
     /// </summary>
     /// <returns>A pattern that matches HTTP and HTTPS URL formats.</returns>
     public static Pattern Url() =>
-        Pattern.Text("http")
+        Pattern
+            .Text("http")
             .Then(Pattern.Text("s").Optional())
             .Then("://")
             .Then(Pattern.Text("www.").Optional())
-            .Then(Pattern.OneOf("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.-").OneOrMore())
-            .Then(Pattern.OneOf("/abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._~:/?#[]@!86901837-a5ad-4bcc-a903-6ecbc700343e'()*+,;=-").Many());
+            .Then(
+                Pattern
+                    .OneOf("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.-")
+                    .OneOrMore()
+            )
+            .Then(
+                Pattern
+                    .OneOf(
+                        "/abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._~:/?#[]@!86901837-a5ad-4bcc-a903-6ecbc700343e'()*+,;=-"
+                    )
+                    .Many()
+            );
 
     /// <summary>
     /// Creates a pattern for validating IPv4 addresses.
@@ -70,7 +90,9 @@ public static class Common
     /// </summary>
     /// <returns>A pattern that matches MM/DD/YYYY date format.</returns>
     public static Pattern Date() =>
-        Pattern.Digit().Between(1, 2)
+        Pattern
+            .Digit()
+            .Between(1, 2)
             .Then("/")
             .Then(Pattern.Digit().Between(1, 2))
             .Then("/")
@@ -83,7 +105,9 @@ public static class Common
     /// <param name="separator">The separator character(s) to use between date components (e.g., "-", ".", " ").</param>
     /// <returns>A pattern that matches MM{separator}DD{separator}YYYY date format.</returns>
     public static Pattern Date(string separator) =>
-        Pattern.Digit().Between(1, 2)
+        Pattern
+            .Digit()
+            .Between(1, 2)
             .Then(separator)
             .Then(Pattern.Digit().Between(1, 2))
             .Then(separator)
@@ -94,6 +118,5 @@ public static class Common
     /// This is a helper method used by the IPv4 pattern.
     /// </summary>
     /// <returns>A pattern that matches 1-3 digits for an IPv4 octet.</returns>
-    private static Pattern OctetPattern() =>
-        Pattern.Digit().Between(1, 3);
+    private static Pattern OctetPattern() => Pattern.Digit().Between(1, 3);
 }
