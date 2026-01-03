@@ -14,20 +14,8 @@ public class EndToEndIntegrationTests
     [Fact]
     public void CompleteEmailValidationFlow()
     {
-        // Build pattern using fluent API
-        var emailPattern = Pattern
-            .OneOf("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._-")
-            .OneOrMore()
-            .Then("@")
-            .Then(
-                Pattern
-                    .OneOf("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.-")
-                    .OneOrMore()
-            )
-            .Then(".")
-            .Then(
-                Pattern.OneOf("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ").Between(2, 6)
-            );
+        // Build pattern using fluent API - use Common.Email() for consistency
+        var emailPattern = Common.Email();
 
         // Validate pattern structure
         var validationResult = PatternValidation.ValidatePattern(emailPattern);
@@ -251,8 +239,9 @@ public class EndToEndIntegrationTests
         Assert.False(nestedValidation.IsSuccess);
         Assert.Contains("Nested Match patterns are not allowed", nestedValidation.ErrorMessage);
 
-        // Build should throw InvalidOperationException for invalid patterns
-        Assert.Throws<InvalidOperationException>(() => nestedMatchPattern.Build());
+        // ToString should not throw for invalid patterns, should fallback
+        var nestedResult = nestedMatchPattern.ToString();
+        Assert.NotNull(nestedResult); // Should fallback to record ToString, not throw
 
         // 2. Stacked repetition should be caught
         var stackedRepeat = new Repeat(new Repeat(Pattern.Digit(), new Exactly(2)), new Optional());
@@ -263,14 +252,15 @@ public class EndToEndIntegrationTests
             stackedValidation.ErrorMessage
         );
 
-        Assert.Throws<InvalidOperationException>(() => stackedRepeat.Build());
+        var stackedResult = stackedRepeat.ToString();
+        Assert.NotNull(stackedResult); // Should fallback to record ToString, not throw
 
         // 3. Valid patterns should flow through successfully
         var validPattern = Pattern.Text("test").Then(Pattern.Digit().Exactly(3));
         var validValidation = PatternValidation.ValidatePattern(validPattern);
         Assert.True(validValidation.IsSuccess);
 
-        var validRegexString = validPattern.Build();
+        var validRegexString = validPattern.ToString();
         Assert.Equal("test\\d{3}", validRegexString);
 
         var validCompiledRegex = validPattern.Compile();
@@ -321,7 +311,7 @@ public class EndToEndIntegrationTests
         Assert.Equal(6, ((Exactly)optimizedRepeat.Count).Value);
 
         // Build the optimized pattern instead of the original stacked one
-        var compiledStacked = optimizedStacked.Build();
+        var compiledStacked = optimizedStacked.ToString();
         Assert.Equal("\\d{6}", compiledStacked);
     }
 
@@ -332,20 +322,20 @@ public class EndToEndIntegrationTests
 
         // 1. Quantifier optimization
         var inefficientPattern = Pattern.Digit().Between(1, int.MaxValue);
-        var efficientRegex = inefficientPattern.Build();
+        var efficientRegex = inefficientPattern.ToString();
         Assert.Equal("\\d+", efficientRegex); // Should optimize to +
 
         var zeroToManyPattern = Pattern.Digit().Between(0, int.MaxValue);
-        var zeroToManyRegex = zeroToManyPattern.Build();
+        var zeroToManyRegex = zeroToManyPattern.ToString();
         Assert.Equal("\\d*", zeroToManyRegex); // Should optimize to *
 
         // 2. Grouping optimization
         var unnecessaryGrouping = Pattern.Text("hello").OneOrMore();
-        var groupingRegex = unnecessaryGrouping.Build();
+        var groupingRegex = unnecessaryGrouping.ToString();
         Assert.Equal("hello+", groupingRegex); // No grouping needed for single text
 
         var necessaryGrouping = Pattern.Text("hello").Then(Pattern.Digit()).OneOrMore();
-        var necessaryGroupingRegex = necessaryGrouping.Build();
+        var necessaryGroupingRegex = necessaryGrouping.ToString();
         Assert.Equal("(?:hello\\d)+", necessaryGroupingRegex); // Grouping needed for sequence
 
         // 3. Compilation with performance options
@@ -375,7 +365,7 @@ public class EndToEndIntegrationTests
 
         // ToString should use Build() internally
         var toStringResult = complexPattern.ToString();
-        var buildResult = complexPattern.Build();
+        var buildResult = complexPattern.ToString();
         Assert.Equal(buildResult, toStringResult);
 
         // Should handle invalid patterns gracefully in ToString

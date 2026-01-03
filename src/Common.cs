@@ -15,19 +15,12 @@ public static class Common
     /// </summary>
     /// <returns>A pattern that matches basic email address format.</returns>
     public static Pattern Email() =>
-        Pattern
-            .OneOf("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._-")
+        Pattern.OneOf("a-zA-Z0-9._-")
             .OneOrMore()
             .Then("@")
-            .Then(
-                Pattern
-                    .OneOf("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.-")
-                    .OneOrMore()
-            )
+            .Then(Pattern.OneOf("a-zA-Z0-9.-").OneOrMore())
             .Then(".")
-            .Then(
-                Pattern.OneOf("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ").Between(2, 6)
-            );
+            .Then(Pattern.Letter().Between(2, 6));
 
     /// <summary>
     /// Creates a pattern for validating US phone numbers with optional formatting.
@@ -56,18 +49,8 @@ public static class Common
             .Then(Pattern.Text("s").Optional())
             .Then("://")
             .Then(Pattern.Text("www.").Optional())
-            .Then(
-                Pattern
-                    .OneOf("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.-")
-                    .OneOrMore()
-            )
-            .Then(
-                Pattern
-                    .OneOf(
-                        "/abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._~:/?#[]@!86901837-a5ad-4bcc-a903-6ecbc700343e'()*+,;=-"
-                    )
-                    .Many()
-            );
+            .Then(Pattern.OneOf("a-zA-Z0-9.-").OneOrMore())
+            .Then(Pattern.OneOf("/a-zA-Z0-9._~:/?#[]@!$&'()*+,;=-").Many());
 
     /// <summary>
     /// Creates a pattern for validating IPv4 addresses.

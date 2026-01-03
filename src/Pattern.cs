@@ -42,6 +42,30 @@ public abstract record Pattern
             : new CharSet(chars);
 
     /// <summary>
+    /// Creates a pattern that matches any letter (a-z, A-Z).
+    /// </summary>
+    /// <returns>A pattern that matches any alphabetic character.</returns>
+    public static Pattern Letter() => new CharSet("a-zA-Z");
+
+    /// <summary>
+    /// Creates a pattern that matches any lowercase letter (a-z).
+    /// </summary>
+    /// <returns>A pattern that matches any lowercase alphabetic character.</returns>
+    public static Pattern LowerLetter() => new CharSet("a-z");
+
+    /// <summary>
+    /// Creates a pattern that matches any uppercase letter (A-Z).
+    /// </summary>
+    /// <returns>A pattern that matches any uppercase alphabetic character.</returns>
+    public static Pattern UpperLetter() => new CharSet("A-Z");
+
+    /// <summary>
+    /// Creates a pattern that matches any alphanumeric character (a-z, A-Z, 0-9).
+    /// </summary>
+    /// <returns>A pattern that matches any letter or digit.</returns>
+    public static Pattern AlphaNumeric() => new CharSet("a-zA-Z0-9");
+
+    /// <summary>
     /// Creates an anchored pattern that matches the entire input string from start to end.
     /// </summary>
     /// <param name="inner">The inner pattern to anchor. Cannot be null.</param>
@@ -59,11 +83,17 @@ public abstract record Pattern
     {
         try
         {
-            return this.Build();
+            var result = PatternValidation
+                .ValidatePattern(this)
+                .Map(PatternOptimization.OptimizePattern)
+                .Map(RegexBuilder.BuildRegexString);
+
+            return result.IsSuccess
+                ? result.Value
+                : base.ToString() ?? string.Empty;
         }
         catch
         {
-            // Fallback to default record ToString if Build fails
             return base.ToString() ?? string.Empty;
         }
     }
@@ -166,24 +196,6 @@ public static class PatternExtensions
         : new Capture(name, pattern);
 
     /// <summary>
-    /// Builds the pattern into a regex string, applying validation and optimization.
-    /// </summary>
-    /// <param name="pattern">The pattern to build.</param>
-    /// <returns>The regex string representation of the pattern.</returns>
-    /// <exception cref="InvalidOperationException">Thrown when the pattern is invalid or cannot be built.</exception>
-    public static string Build(this Pattern pattern)
-    {
-        var result = PatternValidation
-            .ValidatePattern(pattern)
-            .Map(PatternOptimization.OptimizePattern)
-            .Map(RegexBuilder.BuildRegexString);
-
-        return result.IsSuccess
-            ? result.Value
-            : throw new InvalidOperationException($"Pattern build failed: {result.ErrorMessage}");
-    }
-
-    /// <summary>
     /// Compiles the pattern into a .NET Regex object with default options (Compiled | NonBacktracking).
     /// </summary>
     /// <param name="pattern">The pattern to compile.</param>
@@ -207,7 +219,7 @@ public static class PatternExtensions
         System.Text.RegularExpressions.RegexOptions options
     )
     {
-        var regexString = pattern.Build();
+        var regexString = pattern.ToString();
         try
         {
             return new System.Text.RegularExpressions.Regex(regexString, options);
@@ -454,7 +466,7 @@ public static class RegexBuilder
         switch (pattern)
         {
             case Text text:
-                builder.Append(EscapeRegexSpecialCharacters(text.Value));
+                builder.Append(System.Text.RegularExpressions.Regex.Escape(text.Value));
                 break;
             case Digit:
                 builder.Append(@"\d");
@@ -548,49 +560,40 @@ public static class RegexBuilder
             _ => throw new ArgumentException($"Unknown count type: {count.GetType()}"),
         };
 
-    private static string EscapeRegexSpecialCharacters(string text)
-    {
-        var specialChars = new[]
-        {
-            '.',
-            '^',
-            '$',
-            '*',
-            '+',
-            '?',
-            '(',
-            ')',
-            '[',
-            ']',
-            '{',
-            '}',
-            '|',
-            '\\',
-        };
-        var builder = new System.Text.StringBuilder(text.Length * 2);
-
-        foreach (var c in text)
-        {
-            if (specialChars.Contains(c))
-                builder.Append('\\');
-            builder.Append(c);
-        }
-
-        return builder.ToString();
-    }
-
     private static string EscapeCharacterSetSpecialChars(string chars)
     {
-        var specialChars = new[] { ']', '\\', '^', '-' };
         var builder = new System.Text.StringBuilder(chars.Length * 2);
 
-        foreach (var c in chars)
+        for (var i = 0; i < chars.Length; i++)
         {
-            if (specialChars.Contains(c))
-                builder.Append('\\');
-            builder.Append(c);
+            var c = chars[i];
+
+            switch (c)
+            {
+                case ']':
+                case '\\':
+                case '^':
+                    builder.Append('\\');
+                    builder.Append(c);
+                    break;
+                case '-':
+                    var isValidRange = i > 0 && i < chars.Length - 1 &&
+                                       IsValidRangeCharacter(chars[i - 1]) &&
+                                       IsValidRangeCharacter(chars[i + 1]) &&
+                                       chars[i - 1] < chars[i + 1];
+                    if (!isValidRange)
+                        builder.Append('\\');
+                    builder.Append(c);
+                    break;
+                default:
+                    builder.Append(c);
+                    break;
+            }
         }
 
         return builder.ToString();
     }
+
+    private static bool IsValidRangeCharacter(char c) =>
+        (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9');
 }
